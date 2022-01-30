@@ -1,0 +1,611 @@
+# name:   inchi_roundtrip.org
+# author: nbehrnd@yahoo.com
+# date:   <2022-01-29 Sat>
+# edit:   <2022-01-30 Sun>
+
+* background/intent
+
+  Since a reply to Jmol's user list by January 14, 2022 ([[https://sourceforge.net/p/jmol/mailman/message/37417385/][reference]]), the program
+  extended working with InChI, e.g. to identify molecules as tautomers.  By
+  January 20th, 2022, Robert Hanson mentioned interest to venture out a
+  structure regeneration ([[https://sourceforge.net/p/inchi/mailman/message/37594623/][reference]]).
+
+  Own experience suggests the use of the optional /fixed H-layer/ should be
+  used, i.e., departing from the standard InChI the reference executable
+  (version 1.05) However, does the (perhaps implicit) round trip .sdf -> InChI
+  -> .sdf retain information about atom connectivity and stereo isomers?  Are
+  there structure motifs generally unsuitable for this cycle?
+
+  Apparently, the connectivity table in a .sdf is accessed to assign SMILES
+  strings to obtain a reduced representation of the structure.  It is assumed
+  SMILES may serve as a reliable monitor to describe a structure prior and after
+  this round trip; which equally are known to discern tautomers (e.g., 2-hydroxy
+  pyridine, ~Oc1ccccn1~, and its tautoisomer 2-pyridone, ~C1=CC=CNC(=O)1~).  In
+  this context, a round trip would be lossless if the SMILES strings about one
+  compound would match each other.
+
+* Tools at disposition
+
+  + [[https://openmolecules.org/datawarrior/index.html][DataWarrior]] (version 5.5.0): to generate a library of random molecules,
+    assignment of initial SMILES, export of an initial list.
+  + Python (version 3.9.9), Openbabel (version 3.1.1), RDKit
+    (version 2021.09.2): generation of initial .sdf files from DataWarrior's
+    SMILES, conversion of the SMILES into canonical SMILES (OpenBabel form),
+    assignment of canonical SMILES after the round trip.  Used as provided by
+    Linux Debian 12/bookworm (branch testing).
+  + ~inchi-1~ reference executable for Linux (version 1.05) as provided by InChI
+    trust  Assignment of InChI, generation of .sdf from the InChI.
+  + Emacs (version 27.1) and orgmode for documentation, build and tangle of the
+    eventually used Python script.
+
+* Known unknowns
+
+  As shown in the section /exploration on the CLI/, complementary to OpenBabel,
+  RDKit should be included in the programmatic tests.
+
+* exploration on the CLI
+
+  This round trip edit stays on the CLI.  It is a prototype with a structure not
+  prone to tautomerism.
+  
+** generation of a reference data set
+
+   + generation of a primary .sdf from the CLI
+
+     #+begin_src bash :tangle no
+obabel -:"COC" -h --gen3d --addtotitle "dimethyl ether" -O dimethyl_ether.sdf
+     #+end_src
+
+     #+RESULTS:
+
+   + assignment of an InChI
+
+     #+begin_src bash :tangle no :exports both :results code verbatim
+./inchi-1 dimethyl_ether.sdf
+
+rm dimethyl_ether.sdf.log
+rm dimethyl_ether.sdf.prb 
+
+head dimethyl_ether.sdf.txt
+     #+end_src
+
+     #+RESULTS:
+     #+begin_src bash
+     ,* Input_File: "dimethyl_ether.sdf"
+     Structure: 1
+     InChI=1S/C2H6O/c1-3-2/h1-2H3
+     AuxInfo=1/0/N:1,3,2/E:(1,2)/rA:9nCOCHHHHHH/rB:s1;s2;s1;s1;s1;s3;s3;s3;/rC:.9402,.0576,.0628;2.3612,.0723,.0835;2.8589,.8414,1.1701;.6141,-.5453,-.7889;.5486,1.0724,-.0566;.5486,-.3923,.9802;3.9514,.8181,1.1372;2.5285,.4165,2.1229;2.5285,1.8812,1.0862;
+     #+end_src
+
+     #+RESULTS:
+
+** Retrieve a structure .sdf from InChI
+
+   + carve out the InChI:
+
+     #+begin_src bash :tangle no :exports both :results code verbatim 
+cat dimethyl_ether.sdf.txt | head -3 | tail -1
+cat dimethyl_ether.sdf.txt | head -3 | tail -1 > temp.txt
+     #+end_src
+
+     #+RESULTS:
+     #+begin_src bash
+     InChI=1S/C2H6O/c1-3-2/h1-2H3
+     #+end_src
+
+     #+RESULTS:
+
+   + generate InChI's aux format, regenerate a .sdf
+
+     #+begin_src bash :tangle no :exports both :results code verbatim
+./inchi-1 -InChI2Struct temp.txt intermediate.txt
+head intermediate.txt
+
+echo ""
+ls inter*.txt
+
+echo ""
+./inchi-1 -OutputSDF intermediate.txt output.sdf
+
+rm intermediate.txt.log intermediate.txt.prb 
+head output.sdf 
+     #+end_src
+
+     #+RESULTS:
+     #+begin_src bash
+     ,* Input_File: "temp.txt"
+     Structure: 1. (No struct name)
+     InChI=1S/C2H6O/c1-3-2/h1-2H3
+     AuxInfo=1/0/N:1,2,3/E:(1,2)/rA:3CCO/rB:;s1s2;/rC:;;;
+
+     intermediate.txt
+
+     Structure: 1
+     Structure #1. 
+       InChIV10                                     
+
+       3  2  0  0  0  0  0  0  0  0  1 V2000
+         0.0000    0.0000    0.0000 C   0  0  0     0  0  0  0  0  0
+         0.0000    0.0000    0.0000 C   0  0  0     0  0  0  0  0  0
+         0.0000    0.0000    0.0000 O   0  0  0     0  0  0  0  0  0
+       1  3  1  0  0  0  0
+       2  3  1  0  0  0  0
+     #+end_src
+
+   + trim the .sdf file
+
+     Compared to the expected pattern of .sdf, there is one heading line to many
+     (cf. bug report sent by <2021-10-25 Mon>)
+
+     #+begin_src bash :tangle no :exports both :results code verbatim
+cat output.sdf | tail --lines +2
+cat output.sdf | tail --lines +2 > check.sdf
+
+echo ""
+echo "SMILES assigned on the regenerated .sdf:"
+obabel check.sdf -osmi
+     #+end_src
+
+     #+RESULTS:
+     #+begin_src bash
+     Structure #1. 
+       InChIV10                                     
+
+       3  2  0  0  0  0  0  0  0  0  1 V2000
+         0.0000    0.0000    0.0000 C   0  0  0     0  0  0  0  0  0
+         0.0000    0.0000    0.0000 C   0  0  0     0  0  0  0  0  0
+         0.0000    0.0000    0.0000 O   0  0  0     0  0  0  0  0  0
+       1  3  1  0  0  0  0
+       2  3  1  0  0  0  0
+     M  END
+     $$$$
+
+     SMILES assigned on the regenerated .sdf:
+     COC	Structure #1.
+     #+end_src
+
+   With the SMILES about the regenerated structure obtained, the round trip .sdf
+   -> InChI -> .sdf is complete.  Initial SMILES and SMILES about the
+   regenerated structure match each other.
+
+* Programmatic approach, first generation
+
+
+  This section aims to join the individual steps into a portable script.
+  Eventually, a large number of structures are to be submitted to this round
+  trip edit.
+
+** still missing parts
+
+   + given a SMILES string, generate a .sdf with OpenBabel
+
+     #+begin_src python :tangle no :output both :results output replace
+from openbabel import pybel
+
+mol = pybel.readstring("smi", "CCl")
+mol.make3D()
+print(mol.write("sdf"))
+
+with open("test_file_ob.sdf", mode="w") as newfile:
+    newfile.write(mol.write("sdf"))
+     #+end_src
+
+     #+RESULTS:
+     #+begin_example
+
+      OpenBabel01302220013D
+
+       5  4  0  0  0  0  0  0  0  0999 V2000
+         0.9519    0.0593   -0.0623 C   0  0  0  0  0  0  0  0  0  0  0  0
+         2.7188    0.0593   -0.0623 Cl  0  0  0  0  0  0  0  0  0  0  0  0
+         0.5948    1.0541   -0.3379 H   0  0  0  0  0  0  0  0  0  0  0  0
+         0.5948   -0.1994    0.9369 H   0  0  0  0  0  0  0  0  0  0  0  0
+         0.5948   -0.6767   -0.7860 H   0  0  0  0  0  0  0  0  0  0  0  0
+       1  2  1  0  0  0  0
+       1  3  1  0  0  0  0
+       1  4  1  0  0  0  0
+       1  5  1  0  0  0  0
+     M  END
+     $$$$
+
+     #+end_example
+
+   + a control of the above:
+
+     #+begin_src bash :tangle no :output both :results output replace
+echo "Check the .sdf generated:"
+cat test_file_ob.sdf
+     #+end_src
+
+     #+RESULTS:
+     #+begin_example
+     Check the .sdf generated:
+
+      OpenBabel01302220013D
+
+       5  4  0  0  0  0  0  0  0  0999 V2000
+         0.9519    0.0593   -0.0623 C   0  0  0  0  0  0  0  0  0  0  0  0
+         2.7188    0.0593   -0.0623 Cl  0  0  0  0  0  0  0  0  0  0  0  0
+         0.5948    1.0541   -0.3379 H   0  0  0  0  0  0  0  0  0  0  0  0
+         0.5948   -0.1994    0.9369 H   0  0  0  0  0  0  0  0  0  0  0  0
+         0.5948   -0.6767   -0.7860 H   0  0  0  0  0  0  0  0  0  0  0  0
+       1  2  1  0  0  0  0
+       1  3  1  0  0  0  0
+       1  4  1  0  0  0  0
+       1  5  1  0  0  0  0
+     M  END
+     $$$$
+     #+end_example
+
+   + assign a smiles from a .sdf by OpenBabel
+
+     #+begin_src python :tangle no :output both :results output replace
+from openbabel import pybel
+
+for mymol in pybel.readfile("sdf", "test_file_ob.sdf"):
+    print(mymol.write("smi"))
+     #+end_src
+
+     #+RESULTS:
+     : CCl	
+     : 
+
+   + generate a .sdf from SMILES, rdkit
+
+     #+begin_src python :tangle no :output both :results output replace
+import rdkit
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+mol = Chem.MolFromSmiles("CF")
+with_hydrogens = Chem.AddHs(mol)
+AllChem.EmbedMolecule(with_hydrogens,randomSeed=0xf00d) 
+print(Chem.MolToMolBlock(with_hydrogens))
+
+with open("test_file_rd.sdf", mode="w") as newfile:
+    newfile.write(Chem.MolToMolBlock(with_hydrogens))
+     #+end_src
+
+     #+RESULTS:
+     #+begin_example
+
+          RDKit          3D
+
+       5  4  0  0  0  0  0  0  0  0999 V2000
+        -0.0524   -0.0120    0.0160 C   0  0  0  0  0  0  0  0  0  0  0  0
+         1.3238   -0.1464   -0.1423 F   0  0  0  0  0  0  0  0  0  0  0  0
+        -0.3175    0.0493    1.0931 H   0  0  0  0  0  0  0  0  0  0  0  0
+        -0.3465    0.9303   -0.4647 H   0  0  0  0  0  0  0  0  0  0  0  0
+        -0.6073   -0.8212   -0.5021 H   0  0  0  0  0  0  0  0  0  0  0  0
+       1  2  1  0
+       1  3  1  0
+       1  4  1  0
+       1  5  1  0
+     M  END
+
+     #+end_example
+
+   + check of the above
+
+     #+begin_src bash :tangle no :output both :results output replace
+cat test_file_rd.sdf
+     #+end_src
+
+     #+RESULTS:
+     #+begin_example
+
+          RDKit          3D
+
+       5  4  0  0  0  0  0  0  0  0999 V2000
+        -0.0524   -0.0120    0.0160 C   0  0  0  0  0  0  0  0  0  0  0  0
+         1.3238   -0.1464   -0.1423 F   0  0  0  0  0  0  0  0  0  0  0  0
+        -0.3175    0.0493    1.0931 H   0  0  0  0  0  0  0  0  0  0  0  0
+        -0.3465    0.9303   -0.4647 H   0  0  0  0  0  0  0  0  0  0  0  0
+        -0.6073   -0.8212   -0.5021 H   0  0  0  0  0  0  0  0  0  0  0  0
+       1  2  1  0
+       1  3  1  0
+       1  4  1  0
+       1  5  1  0
+     M  END
+     #+end_example
+
+   + assign SMILES from .sdf by RDKit
+
+     #+begin_src python :tangle no :output both :results output replace
+import rdkit
+from rdkit import Chem
+   
+m = Chem.MolFromMolFile('test_file_rd.sdf')
+print(Chem.MolToSmiles(m,isomericSmiles=False))
+
+     #+end_src
+
+     #+RESULTS:
+     : CF
+
+** construction of a Python script (~inchi-1~ with OpenBabel)
+
+   For this first generation approach, only OpenBabel is used where RDKit would
+   be an interesting, likely worth to check, complementary tool.
+
+   + header
+
+     #+begin_src python :tangle round.py
+#!/usr/bin/env python3
+
+# name:    round.py
+# author:  nbehrnd@yahoo.com
+# license: MIT 2022
+# date:    2022-01-29 (YYYY-MM-DD)
+# edit:    2022-01-30 (YYYY-MM-DD)
+
+"""Monitor a round trip SMILES -> .sdf -> INCHI -> .sdf -> SMILES.
+
+The aim is to monitor how reliable the reconstruction of .sdf from an InChI
+string actually is.  It is assumed that a successful round trip (SMILES at start
+matching SMILES at the end) requires InChI with fixed H-layer to account for
+tautomerism.  However, it is not evident if this suffices for any organic
+structure submitted as this; axial chirality (the motif of 1,1'-biphenyl,
+TADDOL, BINAP, etc.) possibly present a difficulty here.
+
+Anticipated input: a list of SMILES (e.g. by a DataWarrior library)
+Anticipated output: a report about SMILES passing/failing this test.
+
+This script relays some work to the non-standard libraries of OpenBabel and
+RDKit.  The assignment of InChI as well as the regeneration of .sdf requires the
+reference InChI executable distributed by InChI trust (v. 1.06); here, the
+version for Linux is anticipated."""
+
+import argparse
+import os
+import send2trash
+import subprocess
+
+import openbabel
+from openbabel import pybel
+import rdkit
+from rdkit import Chem
+from rdkit.Chem import AllChem
+
+
+def get_args():
+    """Get command-line arguments"""
+
+    parser = argparse.ArgumentParser(
+        usage="""Check round-trip SMILES -> .sdf -> INCHI -> .sdf -> SMILES.
+
+The anticipated input file is a listing of SMILES to process (the file
+extension does not matter).  Keep the inchi-1 executable (v 1.05) for
+Linux by InChI trust (add the executable bit) in the same folder as
+this script and provide with OpenBabel's Python libraries.
+
+If an entry's canonical SMILES prior and after the round trip match
+each other, the structure enters file success_structures.log.  Else,
+the SMILES prior and after the round trip are recorded in the file
+failing_structures.log.  The criterion currently deployed is OpenBabel's
+canonical SMILES about the intermediate .sdf written.""")
+
+
+    parser.add_argument("source_file",
+                        metavar="FILE",
+                        help="Input file containing a list of SMILES strings.")
+
+    return parser.parse_args()
+    #+end_src
+
+   + split the input file into individual entries
+
+     #+begin_src python :tangle round.py
+def split(input_file=""):
+    """Read the SMILES into a list"""
+    input_list = []
+    with open(input_file, mode="r") as newfile:
+        for entry in newfile:
+            input_list.append(str(entry).strip())
+
+    return input_list
+     #+end_src
+
+   + convert SMILES into OpenBabel SMILES/RDKit SMILES
+
+     #+begin_src python :tangle round.py
+def smiles2obabel(initial_smiles=""):
+    """Convert SMILES into OpenBabel's canonical SMILES."""
+    mol = pybel.readstring("smi", initial_smiles)
+    obabel_smiles = str(mol.write("can"))
+
+    return obabel_smiles
+
+
+def smiles2rdkit(initial_smiles=""):
+    """Convert SMILES into RDKit's SMILES."""
+    mol = Chem.MolFromSmiles(initial_smiles)
+    rdkit_smiles = Chem.MolToSmiles(mol,isomericsmiles=False)
+
+    return rdkit_smiles
+     #+end_src
+
+   + generate the initial .sdf file
+
+     #+begin_src python :tangle round.py
+def sdf_obabel(raw_smiles=""):
+    """Generate a .sdf with OpenBabel."""
+    mol = pybel.readstring("smi", raw_smiles)
+    mol.make3D()
+    molecule = mol.write("sdf")
+
+    with open("test_file.sdf", mode="w") as newfile:
+        newfile.write(molecule)
+
+def sdf_rdkit(raw_smiles=""):
+    """Generate a .sdf with RDKit."""
+    mol = Chem.MolFromSmiles(raw_smiles)
+    with_hydrogenes = Chem.AddHs(mol)
+    molecule = Chem.MolToMolBlock(withHydrogens)
+
+    with open("test_file.sdf", mode="w") as newfile:
+        newfile.write(molecule)
+     #+end_src
+
+   + perform the round trip
+     #+begin_src python :tangle round.py
+def assign_inchi(initial_sdf=""):
+    """Assign InChI on the initial .sdf.
+
+    Input:   test_file.sdf
+    Output:  inchi.txt"""
+    process=subprocess.Popen(["./inchi-1",  "-fixedH",
+                              "test_file.sdf", "inchi.txt"],
+                              shell=False)
+    process.communicate()
+
+    for file in os.listdir("."):
+        if (file.endswith(".sdf") or
+            file.endswith(".log") or file.endswith(".prb")):
+            send2trash.send2trash(file)
+
+
+def assign_inchi_auxillary():
+    """Generate an auxillary for a structure recovery.
+
+    Input:  inchi.txt
+    Output: auxillary.txt"""
+    process=subprocess.Popen(["./inchi-1", "-InChI2Struct",
+                              "inchi.txt", "auxillary.txt"],
+                              shell=False)
+    process.communicate()
+
+    for file in os.listdir("."):
+        if (file.endswith(".log") or file.endswith(".prb")):
+            send2trash.send2trash(file)
+    send2trash.send2trash("inchi.txt")
+
+
+def generate_inchi_sdf():
+    """Let InChI generate a .sdf.
+
+    Input:  auxillary.txt
+    Output: output.sdf"""
+    process=subprocess.Popen(["./inchi-1", "-OutputSDF",
+                              "auxillary.txt", "output.sdf"],
+                             shell=False)
+    process.communicate()
+
+    for file in os.listdir("."):
+        if (file.endswith(".log") or file.endswith(".prb")):
+            send2trash.send2trash(file)
+    send2trash.send2trash("auxillary.txt")
+     #+end_src
+
+   + return the SMILES about the new .sdf file
+
+     #+begin_src python :tangle round.py
+def trim_sdf_file():
+    """Remove the superflous leading lines inchi-1 wrote in the .sdf."""
+    register = []
+
+    with open("output.sdf", mode="r") as newfile:
+        register = newfile.readlines()
+        register = register[1:]
+
+    with open("output.sdf", mode="w") as newfile:
+        for line in register:
+            newfile.write(f"{line}")
+
+
+def obabel_newsmiles():
+    """Assign the canonical SMILES by OpenBabel on the new structure."""
+    new_smiles = ""
+    for mol in pybel.readfile("sdf", "output.sdf"):
+        new_smiles = mol.write("can")
+
+    return new_smiles
+
+
+def rdkit_smiles():
+    """Assign the SMILES by RDKit on the new structure."""
+    new_smiles = ""
+    mol = Chem.MolFromMolFile("output.sdf")
+    new_smiles = Chem.MolToSmiles(mol, isomericsmiles=False)
+
+    return new_smiles
+     #+end_src
+
+   + footer
+
+     #+begin_src python :tangle round.py
+def main():
+    """Join the functions."""
+    args = get_args()
+    input_file = args.source_file
+
+    success = []
+    failing = []
+
+    listed = split(input_file)
+    for entry in listed:
+        raw_smiles = ""
+        raw_smiles = str(smiles2obabel(entry))
+        raw_smiles = raw_smiles.split()[0]
+
+        sdf_obabel(raw_smiles)
+
+        assign_inchi("test_file.sdf")
+        assign_inchi_auxillary()
+        generate_inchi_sdf()
+
+        trim_sdf_file()
+
+        new_smiles = str(obabel_newsmiles()).strip().split()[0]
+
+        if str(raw_smiles) == str(new_smiles).split()[0]:
+            success.append(raw_smiles)
+        else:
+            retain = "\t".join([raw_smiles, new_smiles])
+            failing.append(retain)
+    send2trash.send2trash("output.sdf")
+
+    print("\n---- ----\n")
+    print("Brief report:")
+    print(f"success structures: {len(success)}")
+    with open("success_structures.log", mode="w") as newfile:
+        for entry in success:
+            newfile.write(f"{entry}\n")
+        newfile.write("END")
+
+    print(f"failing structures: {len(failing)}")
+    with open("failing_structures.log", mode="w") as newfile:
+        newfile.write("SMILES (prior)\tSMILES (after) round trip:\n")
+        for entry in failing:
+            newfile.write(f"{entry}\n")
+        newfile.write("\nEND")
+
+    print("\nCheck file 'success_structures.log' and 'failing_structures.log'.")
+
+
+if __name__ == "__main__":
+    main()
+     #+end_src
+     
+* Analyses
+
+** Library of 100 entries
+
+   DataWarrior was used to generate a library of 100 molecules
+   (~Random_Molecules.dwar~). Smiles in the exported as text file
+   (~Random_Molecules.txt~) were retrieved by
+   
+   #+begin_src bash :tangle no 
+awk 'NR>=2 {print $2}' Random_Molecules.txt > 100_smiles.txt
+   #+end_src
+
+   and subsequently processed by
+
+   #+begin_src bash :tangle no
+python3 round.py 100_smiles.txt 
+   #+end_src
+
+   to yield 43 structures with successful, and 57 structures with a failed round
+   trip.  The visual comparison of the representations reveals that the current
+   approach taken looses the information about the configuration of double bonds
+   (E/Z) and stereogenic centers (R/S).
