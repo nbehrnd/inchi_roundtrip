@@ -1,0 +1,40 @@
+# name:    content.org
+# author:  nbehrnd@yahoo.com
+# license: MIT, 2022
+# date:    <2022-02-01 Tue>
+# edit:
+
+* objective
+
+  The initial version of Python script ~round.py~ read SMILES about a set of
+  100 drug like molecules suggested by DataWarrior.  Relaying to pybel of
+  OpenBabel, .sdf were written /on the fly/; the InChI reference executable
+  assigned non-standard InChI with fixed H-layer and equally regenerated .sdf
+  using the InChI.  pybel by OpenBabel again assigned SMILES.
+
+* description  
+
+  Out of 100 submitted structures, 43 passed the round trip with unaltered
+  SMILES strings.  For 57 structures, the round trip yielded different SMILES
+  strings.  Changes observed: drop of an information regarding (E/Z) and (R/S)
+  configuration.  In the initial form (DataWarrior's idcode), entries #37 and
+  #46 feature axial chirality (P/M) which wasn't anymore encoded /as such/ in
+  DW's SMILES.
+
+* content
+  #+begin_src bash :exports both :results raw
+tree
+  #+end_src
+
+  #+RESULTS:
+  .
+  ├── 100_smiles.txt
+  ├── content.org
+  ├── failing_structures.log
+  ├── Random_Molecules.dwar
+  ├── Random_Molecules.txt
+  └── success_structures.log
+
+  0 directories, 6 files
+
+  # END
