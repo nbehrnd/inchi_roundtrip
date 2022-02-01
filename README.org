@@ -1,0 +1,33 @@
+# name:    README.org
+# author:  nbehrnd@yahoo.com
+# license: MIT, 2022
+# date:    <2022-02-01 Tue>
+# edit:
+
+This project monitors round trip edits .sdf -> .inchi -> .sdf for molecular
+data.  File ~inchi_roundtrip.org~ is the container to generate the scripts and
+executables used (mainly Python, but including InChI trust's reference binary
+for Linux/Mac, too).  The file equally documents the parameters of the check
+runs performed and their results.
+
+Data to process as well as initial results are organized in sub-folders; each
+including a brief summary about the objective, listing of the corresponding
+files, and a statement regarding the "rate of success" for the round trip edit
+in question.
+
+#+begin_src bash :exports both :results raw replace
+tree -L 1
+#+end_src
+
+#+RESULTS:
+.
+├── 100_smiles
+├── inchi-1
+├── inchi_roundtrip.org
+├── LICENSE
+├── README.org
+└── round.py
+
+1 directory, 5 files
+
+# END
