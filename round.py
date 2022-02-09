@@ -4,7 +4,7 @@
 # author:  nbehrnd@yahoo.com
 # license: MIT 2022
 # date:    2022-01-29 (YYYY-MM-DD)
-# edit:    2022-01-30 (YYYY-MM-DD)
+# edit:    2022-02-09 (YYYY-MM-DD)
 
 """Monitor a round trip SMILES -> .sdf -> INCHI -> .sdf -> SMILES.
 
@@ -18,14 +18,13 @@ TADDOL, BINAP, etc.) possibly present a difficulty here.
 Anticipated input: a list of SMILES (e.g. by a DataWarrior library)
 Anticipated output: a report about SMILES passing/failing this test.
 
-This script relays some work to the non-standard libraries of OpenBabel and
+This script relays some work to the nonstandard libraries of OpenBabel and
 RDKit.  The assignment of InChI as well as the regeneration of .sdf requires the
 reference InChI executable distributed by InChI trust (v. 1.06); here, the
 version for Linux is anticipated."""
 
 import argparse
 import os
-import send2trash
 import subprocess
 
 import openbabel
@@ -42,7 +41,7 @@ def get_args():
         usage="""Check round-trip SMILES -> .sdf -> INCHI -> .sdf -> SMILES.
 
 The anticipated input file is a listing of SMILES to process (the file
-extension does not matter).  Keep the inchi-1 executable (v 1.05) for
+extension does not matter).  Keep the inchi-1 executable (v 1.06) for
 Linux by InChI trust (add the executable bit) in the same folder as
 this script and provide with OpenBabel's Python libraries.
 
@@ -95,8 +94,8 @@ def sdf_obabel(raw_smiles=""):
 def sdf_rdkit(raw_smiles=""):
     """Generate a .sdf with RDKit."""
     mol = Chem.MolFromSmiles(raw_smiles)
-    with_hydrogenes = Chem.AddHs(mol)
-    molecule = Chem.MolToMolBlock(withHydrogens)
+    with_hydrogens = Chem.AddHs(mol)
+    molecule = Chem.MolToMolBlock(with_hydrogens)
 
     with open("test_file.sdf", mode="w") as newfile:
         newfile.write(molecule)
@@ -114,42 +113,42 @@ def assign_inchi(initial_sdf=""):
     for file in os.listdir("."):
         if (file.endswith(".sdf") or
             file.endswith(".log") or file.endswith(".prb")):
-            send2trash.send2trash(file)
+            os.remove(file)
 
 
-def assign_inchi_auxillary():
-    """Generate an auxillary for a structure recovery.
+def assign_inchi_auxiliary():
+    """Generate an auxiliary for a structure recovery.
 
     Input:  inchi.txt
-    Output: auxillary.txt"""
+    Output: auxiliary.txt"""
     process=subprocess.Popen(["./inchi-1", "-InChI2Struct",
-                              "inchi.txt", "auxillary.txt"],
+                              "inchi.txt", "auxiliary.txt"],
                               shell=False)
     process.communicate()
 
     for file in os.listdir("."):
         if (file.endswith(".log") or file.endswith(".prb")):
-            send2trash.send2trash(file)
-    send2trash.send2trash("inchi.txt")
+            os.remove(file)
+    os.remove("inchi.txt")
 
 
 def generate_inchi_sdf():
     """Let InChI generate a .sdf.
 
-    Input:  auxillary.txt
+    Input:  auxiliary.txt
     Output: output.sdf"""
     process=subprocess.Popen(["./inchi-1", "-OutputSDF",
-                              "auxillary.txt", "output.sdf"],
+                              "auxiliary.txt", "output.sdf"],
                              shell=False)
     process.communicate()
 
     for file in os.listdir("."):
         if (file.endswith(".log") or file.endswith(".prb")):
-            send2trash.send2trash(file)
-    send2trash.send2trash("auxillary.txt")
+            os.remove(file)
+    os.remove("auxiliary.txt")
 
 def trim_sdf_file():
-    """Remove the superflous leading lines inchi-1 wrote in the .sdf."""
+    """Remove the superfluous leading lines inchi-1 wrote in the .sdf."""
     register = []
 
     with open("output.sdf", mode="r") as newfile:
@@ -195,7 +194,7 @@ def main():
         sdf_obabel(raw_smiles)
 
         assign_inchi("test_file.sdf")
-        assign_inchi_auxillary()
+        assign_inchi_auxiliary()
         generate_inchi_sdf()
 
         trim_sdf_file()
@@ -207,7 +206,7 @@ def main():
         else:
             retain = "\t".join([raw_smiles, new_smiles])
             failing.append(retain)
-    send2trash.send2trash("output.sdf")
+    os.remove("output.sdf")
 
     print("\n---- ----\n")
     print("Brief report:")
