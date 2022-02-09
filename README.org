@@ -15,7 +15,7 @@ including a brief summary about the objective, listing of the corresponding
 files, and a statement regarding the "rate of success" for the round trip edit
 in question.
 
-#+begin_src bash :exports both :results raw replace code
+#+begin_src bash :exports both code :results raw replace code
 tree -L 1
 #+end_src
 
@@ -35,27 +35,6 @@ tree -L 1
 
 1 directory, 9 files
 #+end_src
-.
-├── 100_smiles
-├── inchi-1
-├── inchi_roundtrip.org
-├── inchi_sdf.py
-├── LICENSE
-├── README.org
-├── round.py
-├── smiles_obsdf.py
-├── test_inchi_sdf.py
-└── test_smiles_obsdf.py
 
-1 directory, 9 files
-.
-├── 100_smiles
-├── inchi-1
-├── inchi_roundtrip.org
-├── LICENSE
-├── README.org
-└── round.py
-
-1 directory, 5 files
 
 # END
