@@ -1,7 +1,7 @@
 # name:   inchi_roundtrip.org
 # author: nbehrnd@yahoo.com
 # date:   <2022-01-29 Sat>
-# edit:   <2022-01-30 Sun>
+# edit:   <2022-02-09 Wed>
 
 * background/intent
 
@@ -37,6 +37,36 @@
     trust  Assignment of InChI, generation of .sdf from the InChI.
   + Emacs (version 27.1) and orgmode for documentation, build and tangle of the
     eventually used Python script.
+
+  This repository includes scripts for Python 3 newly written and tangled from
+  the main file of this project, ~inchi_roundtrip.org~:
+  + ~smiles_obsdf.py~ departs from a list of SMILES strings OpenBabel rewrites
+    as /canonical SMILES/.  Calling OpenBabel, the structures are converted into
+    an intermediate ~.sdf~ submitted to InChI trust's reference executable to
+    assign an InChI string.  The InChI string is used by InChI trust's reference
+    executable to generate a secondary ~.sdf~ OpenBabel assigns a secondary
+    SMILES string.  In Linux, ensure InChI trust's reference executable has the
+    executable bit (e.g., by ~chmod u+x ./inchi-1~).
+
+    Here, the round trip is successful if the canonical SMILES string prior the
+    round trip matches the canonical SMILES string after the round trip.
+
+    As a control of the approach in script ~smiles_obsdf.py~, test script
+    ~test_smiles_obsdf.py~ for Pytest was written.
+
+  + ~inchi_sdf.py~ departs from a list of one or multiple molecules deposit as
+    individual models in a ~.sdf~ file.  For each entry, InChI trust's reference
+    executable assigns a primary InChI string which is used to write an
+    intermediate ~.sdf~ to assign a secondary InChI string.  Thus, the round
+    trip only depends on modules of Python's standard library and InChI trusts's
+    reference executable.  In Linux, ensure InChI trust's reference executable
+    has the executable bit (e.g., by ~chmod u+x ./inchi-1~).
+
+    The round trip is successful if the entry's primary and secondary InChI
+    string match each other.
+
+    To check the implementation of ~inchi_sdf.py~, test script
+    ~test_inchi_sdf.py~ for Pytest was written.
 
 * Known unknowns
 
@@ -330,14 +360,14 @@ print(Chem.MolToSmiles(m,isomericSmiles=False))
 
    + header
 
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 #!/usr/bin/env python3
 
-# name:    round.py
+# name:    smiles_obsdf.py
 # author:  nbehrnd@yahoo.com
 # license: MIT 2022
 # date:    2022-01-29 (YYYY-MM-DD)
-# edit:    2022-01-30 (YYYY-MM-DD)
+# edit:    2022-02-09 (YYYY-MM-DD)
 
 """Monitor a round trip SMILES -> .sdf -> INCHI -> .sdf -> SMILES.
 
@@ -351,14 +381,13 @@ TADDOL, BINAP, etc.) possibly present a difficulty here.
 Anticipated input: a list of SMILES (e.g. by a DataWarrior library)
 Anticipated output: a report about SMILES passing/failing this test.
 
-This script relays some work to the non-standard libraries of OpenBabel and
+This script relays some work to the nonstandard libraries of OpenBabel and
 RDKit.  The assignment of InChI as well as the regeneration of .sdf requires the
 reference InChI executable distributed by InChI trust (v. 1.06); here, the
 version for Linux is anticipated."""
 
 import argparse
 import os
-import send2trash
 import subprocess
 
 import openbabel
@@ -375,7 +404,7 @@ def get_args():
         usage="""Check round-trip SMILES -> .sdf -> INCHI -> .sdf -> SMILES.
 
 The anticipated input file is a listing of SMILES to process (the file
-extension does not matter).  Keep the inchi-1 executable (v 1.05) for
+extension does not matter).  Keep the inchi-1 executable (v 1.06) for
 Linux by InChI trust (add the executable bit) in the same folder as
 this script and provide with OpenBabel's Python libraries.
 
@@ -395,7 +424,7 @@ canonical SMILES about the intermediate .sdf written.""")
 
    + split the input file into individual entries
 
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 def split(input_file=""):
     """Read the SMILES into a list"""
     input_list = []
@@ -408,7 +437,7 @@ def split(input_file=""):
 
    + convert SMILES into OpenBabel SMILES/RDKit SMILES
 
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 def smiles2obabel(initial_smiles=""):
     """Convert SMILES into OpenBabel's canonical SMILES."""
     mol = pybel.readstring("smi", initial_smiles)
@@ -427,7 +456,7 @@ def smiles2rdkit(initial_smiles=""):
 
    + generate the initial .sdf file
 
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 def sdf_obabel(raw_smiles=""):
     """Generate a .sdf with OpenBabel."""
     mol = pybel.readstring("smi", raw_smiles)
@@ -440,15 +469,15 @@ def sdf_obabel(raw_smiles=""):
 def sdf_rdkit(raw_smiles=""):
     """Generate a .sdf with RDKit."""
     mol = Chem.MolFromSmiles(raw_smiles)
-    with_hydrogenes = Chem.AddHs(mol)
-    molecule = Chem.MolToMolBlock(withHydrogens)
+    with_hydrogens = Chem.AddHs(mol)
+    molecule = Chem.MolToMolBlock(with_hydrogens)
 
     with open("test_file.sdf", mode="w") as newfile:
         newfile.write(molecule)
      #+end_src
 
    + perform the round trip
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 def assign_inchi(initial_sdf=""):
     """Assign InChI on the initial .sdf.
 
@@ -462,46 +491,46 @@ def assign_inchi(initial_sdf=""):
     for file in os.listdir("."):
         if (file.endswith(".sdf") or
             file.endswith(".log") or file.endswith(".prb")):
-            send2trash.send2trash(file)
+            os.remove(file)
 
 
-def assign_inchi_auxillary():
-    """Generate an auxillary for a structure recovery.
+def assign_inchi_auxiliary():
+    """Generate an auxiliary for a structure recovery.
 
     Input:  inchi.txt
-    Output: auxillary.txt"""
+    Output: auxiliary.txt"""
     process=subprocess.Popen(["./inchi-1", "-InChI2Struct",
-                              "inchi.txt", "auxillary.txt"],
+                              "inchi.txt", "auxiliary.txt"],
                               shell=False)
     process.communicate()
 
     for file in os.listdir("."):
         if (file.endswith(".log") or file.endswith(".prb")):
-            send2trash.send2trash(file)
-    send2trash.send2trash("inchi.txt")
+            os.remove(file)
+    os.remove("inchi.txt")
 
 
 def generate_inchi_sdf():
     """Let InChI generate a .sdf.
 
-    Input:  auxillary.txt
+    Input:  auxiliary.txt
     Output: output.sdf"""
     process=subprocess.Popen(["./inchi-1", "-OutputSDF",
-                              "auxillary.txt", "output.sdf"],
+                              "auxiliary.txt", "output.sdf"],
                              shell=False)
     process.communicate()
 
     for file in os.listdir("."):
         if (file.endswith(".log") or file.endswith(".prb")):
-            send2trash.send2trash(file)
-    send2trash.send2trash("auxillary.txt")
+            os.remove(file)
+    os.remove("auxiliary.txt")
      #+end_src
 
    + return the SMILES about the new .sdf file
 
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 def trim_sdf_file():
-    """Remove the superflous leading lines inchi-1 wrote in the .sdf."""
+    """Remove the superfluous leading lines inchi-1 wrote in the .sdf."""
     register = []
 
     with open("output.sdf", mode="r") as newfile:
@@ -533,7 +562,7 @@ def rdkit_smiles():
 
    + footer
 
-     #+begin_src python :tangle round.py
+     #+begin_src python :tangle smiles_obsdf.py
 def main():
     """Join the functions."""
     args = get_args()
@@ -551,7 +580,7 @@ def main():
         sdf_obabel(raw_smiles)
 
         assign_inchi("test_file.sdf")
-        assign_inchi_auxillary()
+        assign_inchi_auxiliary()
         generate_inchi_sdf()
 
         trim_sdf_file()
@@ -563,7 +592,7 @@ def main():
         else:
             retain = "\t".join([raw_smiles, new_smiles])
             failing.append(retain)
-    send2trash.send2trash("output.sdf")
+    os.remove("output.sdf")
 
     print("\n---- ----\n")
     print("Brief report:")
@@ -587,6 +616,533 @@ if __name__ == "__main__":
     main()
      #+end_src
      
+** check script for smiles_obsdf.py
+
+   Modifications in the code may introduce unwanted changes in the results
+   tangled ~smiles_obsdf.py~ provides.  To be informed early about them, a
+   dedicated test based on pytest.
+
+   #+begin_src python :tangle test_smiles_obsdf.py
+#!/bin/usr/env python3
+
+# name:    tangle test_smiles_obsdf.py
+# author:  nbehrnd@yahoo.com
+# license: GPL v3, 2022
+# date:    2022-02-07 (YYYY-MM-DD)
+# edit:
+#
+
+"""Provide basic testing about script smiles_obsdf.py's round trip.
+
+For the initial run with the set 100_smiles.txt, 57/100 entries did not pass
+successfully the round trip Openbabel SMILES -> OpenBabel .sdf -> InChI string
+-> InChI .sdf -> OpenBabel SMILES.  To identify systematic errors in own
+programming early, this script tests the processing with pytest when calling
+
+pytest -v test_smiles_obsdf.py
+
+Proper execution of this test script depends on the presence of smiles_obsdf.py
+in the same directory as this script, test_smiles_obsdf.py.  It equally requires
+the InChI trust reference executable for Linux, an working installation of the
+non-standard Python libraries about OpenBabel and Pytest (for Python3).
+Depending on the Linux distribution used, Pytest (for Python3) might be called
+by either pytest, or explicit pytest-3."""
+import os
+from subprocess import getstatusoutput, getoutput
+
+import pytest
+
+PROGRAM = str("./smiles_obsdf.py")
+TFILE = str("testfile.smi")
+
+
+def write_testfile(SMILES=""):
+    """Provide a file with the input structure."""
+    with open(TFILE, mode="w") as newfile:
+        newfile.write(str(SMILES))
+
+
+def make_tester(structure=""):
+    """Provide the frame to perform tests on varying SMILES strings."""
+    smiles = ""
+    smiles = str(structure)
+    write_testfile(SMILES=smiles)
+    assert os.path.isfile(TFILE)
+
+    test = getoutput(f"python3 {PROGRAM} {TFILE}")
+    assert os.path.isfile("failing_structures.log")
+    assert os.path.isfile("success_structures.log")
+
+    success_reader = ""
+    with open("success_structures.log", mode="r") as source:
+        success_reader = str(source.readline()).strip()
+    assert success_reader == smiles
+
+    os.remove("testfile.smi")
+    os.remove("failing_structures.log")
+    os.remove("success_structures.log")
+
+
+def test_dimethylether():
+    """Check a structure not prone to tautomerism."""
+    make_tester(structure="COC")
+
+
+def test_2hydroxypyridine():
+    """Check a structure prone to tautomerism, 1/2."""
+    make_tester(structure="Oc1ccccn1")
+
+
+def test_2pyridone():
+    """Check a structure prone to tautomerism, 2/2."""
+    make_tester(structure="O=c1cccc[nH]1")
+   #+end_src
+
+
+   
+** Wrapper script for the InChI trust binary
+
+   DataWarrior may export the library of drug-like molecules as a .sdf file
+   which in turn may be processed by InChI trust's current reference executable
+   (version 1.06) to assign InChI, as well as to perform the reconstruction of
+   /a/ .sdf file.
+
+   Thus, a naive approach may probe the success of a round trip by comparison of
+   the InChI strings (non-standard for their inclusion of the fixed H-layer)
+   prior and after processing the structures.  This possibly mutates the call
+   for OpenBabel (or RDKit) for the assignment of SMILES into an option, rather
+   then a strict necessity.
+
+   + header
+
+     #+begin_src python :tangle inchi_sdf.py
+#!/usr/bin/env python3
+
+# name:    inchi_sdf.py
+# author:  nbehrnd@yahoo.com
+# license: MIT 2022
+# date:    2022-02-01 (YYYY-MM-DD)
+# edit:    2022-02-09 (YYYY-MM-DD)
+
+"""Monitor a round trip .sdf -> InChI -> .sdf, InChI executable.
+
+Starting from a multi-model .sdf non-zero coordinates, this script relies on
+modules of the Python standard library and InChI trusts' reference executable
+(version 1.06).  This script, InChI trust's executable (with the added
+executable bit), and the data to process are expected to reside in the same
+folder.
+
+Anticipated input:  multi-model .sdf (e.g., by DataWarrior)
+Anticipated output: a report about structures passing/failing this test.
+
+The criterion for passing the round trip is an invariant InChI string."""
+
+import argparse
+import os
+import subprocess
+
+
+def get_args():
+    """Get command-line arguments"""
+
+    parser = argparse.ArgumentParser(
+        usage="""Check round-trip .sdf -> INCHI -> .sdf with InChI v1.06.
+
+The anticipated input file is a multi-model .sdf file to process (the file
+extension does not matter).  Keep the inchi-1 executable (v 1.05) for Linux by
+InChI trust (add the executable bit) in the same folder as this script and
+provide with OpenBabel's Python libraries.
+
+If an entry's non-standard InChI (fixed H-layer) prior and after the round trip
+match each other, the structure enters file success_structures.log.  Else, the
+entry is reported in file failing_structures.log.""")
+
+
+    parser.add_argument("source_file",
+                        metavar="FILE",
+                        help="Input .sdf file containing a list molecules.")
+
+    return parser.parse_args()
+
+
+def model_lister(input_file=""):
+    """Return the model data of a .sdf as a listing.
+
+This counts (x + 1) entries and looses the terminal `$$$$` string of each model."""
+    all_model_data = ""
+    register = []
+
+    with open(input_file, mode="r") as source:
+        for line in source:
+            all_model_data += "".join([str(line)])
+            
+  #  del register[0]
+    register = all_model_data.split("$$$$\n")
+    return register
+     #+end_src
+
+   + initial screening by InChI trust's executable
+     
+     #+begin_src python :tangle inchi_sdf.py
+def assign_primary_inchi(input_model=""):
+    """Assign the primary InChI to the original datum.
+
+    Input:  the primary .sdf string
+    Output: the primary InChI string."""
+    register = []
+    primary_inchi = ""
+
+    with open("testfile.sdf", mode="w") as newfile:
+        newfile.write(input_model)
+        newfile.write("$$$$\n")
+        
+    process=subprocess.Popen(["./inchi-1", "-FixedH", "-AuxNone",
+                              "-NoLabels",
+                              "testfile.sdf", "primary_inchi.txt"],
+                             shell=False)
+    process.communicate()
+
+    try:
+        with open("primary_inchi.txt", mode="r") as source:
+            register = source.readlines()
+            primary_inchi = str(register[0]).strip()
+    except OSError:
+        print("No access to 'primary_inchi.txt'.")
+
+    for file in ["testfile.sdf",
+                 "testfile.sdf.prb", "testfile.sdf.log",
+                 "primary_inchi.txt"]:
+        try:
+            os.remove(file)
+        except OSError:
+            print(f"Remove of file '{file}' was unsuccessful.")
+
+    return primary_inchi
+     #+end_src
+
+   + structure generation from InChIs
+
+     #+begin_src python :tangle inchi_sdf.py
+def assign_inchi_auxiliary(inchi_string=""):
+    """Generate an auxiliary file for a structure recovery.
+
+    Input:  the primary InChI string (cf. function assign_primary_inchi)
+    Output: a temporary auxiliary.txt"""
+    with open("testfile.txt", mode="w") as newfile:
+        newfile.write(inchi_string)
+
+    process=subprocess.Popen(["./inchi-1", "-InChI2Struct",
+                              "testfile.txt", "auxiliary.txt"],
+                              shell=False)
+    process.communicate()
+
+    for file in ["testfile.txt",
+                 "testfile.txt.log", "testfile.txt.prb"]:
+        try:
+            os.remove(file)
+        except OSError:
+            print(f"Remove of file '{file}' was unsuccessful.")
+
+
+def generate_inchi_sdf():
+    """Based on an auxiliary, let InChI generate a .sdf.
+
+    Input:  auxiliary.txt
+    Output: output.sdf"""
+
+    process=subprocess.Popen(["./inchi-1", "-OutputSDF",
+                              "auxiliary.txt", "output.sdf"],
+                             shell=False)
+    process.communicate()
+
+    for file in ["auxiliary.txt",
+                 "auxiliary.txt.log", "auxiliary.txt.prb"]:
+        try:
+            os.remove(file)
+        except OSError:
+            print(f"Remove of file '{file}' was unsuccessful.")
+
+
+def correct_secondary_sdf():
+    """As already filed, there is a superfluous heading line in InChI's .sdf"""
+    register = []
+    try:
+        with open("output.sdf", mode="r") as source:
+            for line in source:
+                register.append(str(line).rstrip())
+        del register[0]
+
+        with open("output.sdf", mode="w") as newfile:
+            for entry in register:
+                newfile.write(f"{entry}\n")
+    except OSError:
+        print(f"correction of InChI's .sdf failed.")
+     #+end_src
+
+   + second assignment of InChI, now on .sdf with zero-coordinates
+
+     #+begin_src python :tangle inchi_sdf.py
+def assign_secondary_inchi():
+    """Assign InChI on the newly generated .sdf.
+
+    Input:   output.sdf
+    Output:  secondary InChI string"""
+    register = []
+    secondary_inchi = ""
+    
+    process=subprocess.Popen(["./inchi-1", "-fixedH", "-AuxNone",
+                              "-NoLabels",
+                              "output.sdf", "secondary_inchi.txt"],
+                              shell=False)
+    process.communicate()
+
+    try:
+        with open("secondary_inchi.txt", mode="r") as source:
+            register = source.readlines()
+            secondary_inchi = str(register[0]).strip()
+    except OSError:
+        print(f"Assignment secondary InChI failed.")
+
+    try:
+        for file in ["output.sdf",
+                    "output.sdf.log", "output.sdf.prb",
+                    "secondary_inchi.txt"]:
+            os.remove(file)
+    except OSError:
+        print(f"Removal of file '{file}' failed.")
+
+    return secondary_inchi
+     #+end_src
+
+   + footer
+
+     #+begin_src python :tangle inchi_sdf.py
+def main():
+    """Join the functions.
+
+Reading a .sdf file which may contain one datum, or multiple model data,
+the round trip's InChI strings per model are compared with each other.  If
+they match pairwise, the round trip was successful; else, it failed.  The
+script is going to write two new .sdf files according to these categories."""
+    success = []
+    failing = []
+    counter = int(1)
+
+    args = get_args()
+    input_file = args.source_file
+    list_of_models = model_lister(input_file=input_file)
+
+    for entry in list_of_models[:-1]:
+        primary_inchi = ""
+        secondary_inchi = ""
+
+        primary_inchi = assign_primary_inchi(input_model=entry)
+
+        assign_inchi_auxiliary(inchi_string=primary_inchi)
+        generate_inchi_sdf()
+        correct_secondary_sdf()
+
+        secondary_inchi = assign_secondary_inchi()
+
+        if primary_inchi == secondary_inchi:
+            success.append(f"{counter}\t{primary_inchi}\t{secondary_inchi}")
+        else:
+            failing.append(f"{counter}\t{primary_inchi}\t{secondary_inchi}")
+        counter += int(1)
+
+    print("\n---- ----\n")
+    print("Brief report:")
+    print(f"success structures: {len(success)}")
+    with open("success_structures.log", mode="w") as newfile:
+        newfile.write("successful round trips\n")
+        newfile.write("\t".join(['counter',
+                                 'primary InChI', 'secondary InChI\n']))
+        for entry in success:
+            newfile.write(f"{entry}\n")
+        newfile.write("END")
+
+    print(f"failing structures: {len(failing)}")
+    with open("failing_structures.log", mode="w") as newfile:
+        newfile.write("failing round trips:\n")
+        newfile.write("\t".join(['counter',
+                                 'primary InChI', 'secondary InChI\n']))
+        for entry in failing:
+            newfile.write(f"\n{entry}")
+        newfile.write("\nEND")
+
+    print("\nCheck file 'success_structures.log' and 'failing_structures.log'.")
+
+
+if __name__ == "__main__":
+    main()
+     #+end_src
+
+** Checker for ~inchi_sdf.py~, script ~test_inchi_sdf.py~
+
+   Ahead of script ~inchi_sdf.py~ to run over libraries of test molecules, test
+   script ~test_inchi_sdf.py~ shall identify systematic errors in the
+   implementation of the former by submission of individual molecules.
+
+   #+begin_src python :tangle test_inchi_sdf.py
+#!/usr/bin/env python3
+
+# name:    test_inchi_sdf.py
+# author:  nbehrnd@yahoo.com
+# license: MIT, 2022
+# date:    2022-07-02 (YYYY-MM-DD)
+# edit:    2022-09-02 (YYYY-MM-DD)
+#
+
+"""Identify systematic errors in inchi_sdf.py in a round trip.
+
+Script inchi_sdf.py aims to monitor the round trip of .sdf for which InChI
+trust's reference executable is going to assign a primary InChI string.  Based
+on this reduced representation, InChI trust's reference executable then
+reconstructs a .sdf for which again a -- then secondary -- InChI string is
+assigned.  Thus, except for the generation of the initial .sdf file, this is
+round trip independent of interaction by OpenBabel, or RDKit.  This script
+test_inchi_sdf.py shall detect problems in the implementation of the intended
+round trip, well ahead of working on libraries of molecules.
+
+Deployment with pytest for Python 3 which may -- depending on the Linux
+distribution used -- may be accessible by pytest, or pytest-3
+
+pytest -v test_inchi_sdf.py
+
+The execution depends on the simultaneous presence of this script, InChI trust's
+reference binary for Linux (version 1.06), and inchi_sdf.py."""
+import os
+from subprocess import getstatusoutput, getoutput
+
+import pytest
+
+PROGRAM = str("./inchi_sdf.py")
+TFILE = str("testfile.sdf")
+
+def write_testfile(model=""):
+    """Provide a file with a single input structure."""
+    with open(TFILE, mode="w") as newfile:
+        newfile.write(str(model))
+
+
+def make_tester(model=""):
+    """Provide the frame to perform a mono-model test."""
+    register = []
+    check = ""
+    write_testfile(model=model)
+
+    test = getoutput(f"python3 {PROGRAM} {TFILE}") # export
+
+    try:
+        with open("success_structures.log", mode="r") as source:
+            register = source.readlines()
+        check = str(register[2])
+    except OSError:
+        print("File 'success_structures.log' inaccessible.  Exit.")
+
+    assert str(check[0]) == str("1")
+
+
+def test_dimethylether():
+    """Check a structure not prone to tautomerism."""
+    model=str("""
+ OpenBabel020722
+
+  9  8  0  0  0  0  0  0  0  0999 V2000
+    1.0496    0.0176   -0.0708 C   0  0  0  0  0  0  0  0  0  0  0  0
+    2.4706    0.0409   -0.0805 O   0  0  0  0  0  0  0  0  0  0  0  0
+    2.9681    1.2713   -0.5890 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.7233   -0.9468    0.3277 H   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6579    0.1267   -1.0868 H   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6579    0.8122    0.5717 H   0  0  0  0  0  0  0  0  0  0  0  0
+    4.0606    1.2342   -0.5737 H   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6377    2.1060    0.0369 H   0  0  0  0  0  0  0  0  0  0  0  0
+    2.6377    1.4205   -1.6216 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  1  4  1  0  0  0  0
+  1  5  1  0  0  0  0
+  1  6  1  0  0  0  0
+  2  3  1  0  0  0  0
+  3  7  1  0  0  0  0
+  3  8  1  0  0  0  0
+  3  9  1  0  0  0  0
+M  END
+$$$$
+""")
+    make_tester(model=model)
+
+
+def test_2hydroxypyridine():
+    """Check on a structure subject to tautomerism, 1/2."""
+    model=str("""
+ OpenBabel020922
+
+ 12 12  0  0  0  0  0  0  0  0999 V2000
+    1.1010    0.0362    0.2292 O   0  0  0  0  0  0  0  0  0  0  0  0
+    2.4532    0.1277    0.0818 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0800    1.3588   -0.0232 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.4624    1.3765   -0.1859 C   0  0  0  0  0  0  0  0  0  0  0  0
+    5.1572    0.1724   -0.2356 C   0  0  0  0  0  0  0  0  0  0  0  0
+    4.4357   -1.0046   -0.1155 C   0  0  0  0  0  0  0  0  0  0  0  0
+    3.0966   -1.0509    0.0435 N   0  0  0  0  0  0  0  0  0  0  0  0
+    0.7330    0.9279    0.1589 H   0  0  0  0  0  0  0  0  0  0  0  0
+    2.5246    2.2874    0.0199 H   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9939    2.3198   -0.2738 H   0  0  0  0  0  0  0  0  0  0  0  0
+    6.2335    0.1504   -0.3648 H   0  0  0  0  0  0  0  0  0  0  0  0
+    4.9303   -1.9708   -0.1450 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  1  0  0  0  0
+  1  8  1  0  0  0  0
+  2  3  1  0  0  0  0
+  2  7  2  0  0  0  0
+  3  4  2  0  0  0  0
+  3  9  1  0  0  0  0
+  4  5  1  0  0  0  0
+  4 10  1  0  0  0  0
+  5  6  2  0  0  0  0
+  5 11  1  0  0  0  0
+  6  7  1  0  0  0  0
+  6 12  1  0  0  0  0
+M  END
+$$$$
+""")
+
+
+def test_2pyridone():
+    """Check on a structure subject to tautomerism, 2/2."""
+    model=str("""
+ OpenBabel020922
+
+ 12 12  0  0  0  0  0  0  0  0999 V2000
+    2.1606    0.0524    0.0004 O   0  0  0  0  0  0  0  0  0  0  0  0
+    0.9356    0.0285    0.0010 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.1384    1.2834    0.0009 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.2014    1.2181   -0.0004 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.8769   -0.0594   -0.0011 C   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.1608   -1.1905    0.0010 C   0  0  0  0  0  0  0  0  0  0  0  0
+    0.2101   -1.1399    0.0021 N   0  0  0  0  0  0  0  0  0  0  0  0
+    0.6873    2.2152    0.0021 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.8036    2.1203   -0.0002 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -2.9616   -0.0773   -0.0031 H   0  0  0  0  0  0  0  0  0  0  0  0
+   -1.6167   -2.1750    0.0015 H   0  0  0  0  0  0  0  0  0  0  0  0
+    0.7533   -1.9942    0.0027 H   0  0  0  0  0  0  0  0  0  0  0  0
+  1  2  2  0  0  0  0
+  2  3  1  0  0  0  0
+  2  7  1  0  0  0  0
+  3  4  2  0  0  0  0
+  3  8  1  0  0  0  0
+  4  5  1  0  0  0  0
+  4  9  1  0  0  0  0
+  5  6  2  0  0  0  0
+  5 10  1  0  0  0  0
+  6  7  1  0  0  0  0
+  6 11  1  0  0  0  0
+  7 12  1  0  0  0  0
+M  END
+$$$$
+""")
+#+end_src
+
+
 * Analyses
 
 ** Library of 100 entries
@@ -602,7 +1158,7 @@ awk 'NR>=2 {print $2}' Random_Molecules.txt > 100_smiles.txt
    and subsequently processed by
 
    #+begin_src bash :tangle no
-python3 round.py 100_smiles.txt 
+python3 smiles_obsdf.py 100_smiles.txt 
    #+end_src
 
    to yield 43 structures with successful, and 57 structures with a failed round

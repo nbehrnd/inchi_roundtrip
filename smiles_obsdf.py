@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# name:    round.py
+# name:    smiles_obsdf.py
 # author:  nbehrnd@yahoo.com
 # license: MIT 2022
 # date:    2022-01-29 (YYYY-MM-DD)
