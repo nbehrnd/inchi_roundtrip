@@ -45,7 +45,8 @@
     an intermediate ~.sdf~ submitted to InChI trust's reference executable to
     assign an InChI string.  The InChI string is used by InChI trust's reference
     executable to generate a secondary ~.sdf~ OpenBabel assigns a secondary
-    SMILES string.
+    SMILES string.  In Linux, ensure InChI trust's reference executable has the
+    executable bit (e.g., by ~chmod u+x ./inchi-1~).
 
     Here, the round trip is successful if the canonical SMILES string prior the
     round trip matches the canonical SMILES string after the round trip.
@@ -56,9 +57,10 @@
   + ~inchi_sdf.py~ departs from a list of one or multiple molecules deposit as
     individual models in a ~.sdf~ file.  For each entry, InChI trust's reference
     executable assigns a primary InChI string which is used to write an
-    intermediate ~.sdf~ to assign a secondary InChI string.  Thus, the round trip
-    only depends on modules of Python's standard library and InChI trusts's
-    reference executable.
+    intermediate ~.sdf~ to assign a secondary InChI string.  Thus, the round
+    trip only depends on modules of Python's standard library and InChI trusts's
+    reference executable.  In Linux, ensure InChI trust's reference executable
+    has the executable bit (e.g., by ~chmod u+x ./inchi-1~).
 
     The round trip is successful if the entry's primary and secondary InChI
     string match each other.
