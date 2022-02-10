@@ -181,6 +181,7 @@ def main():
 
     success = []
     failing = []
+    counter = int(1)
 
     listed = split(input_file)
     for entry in listed:
@@ -199,23 +200,26 @@ def main():
         new_smiles = str(obabel_newsmiles()).strip().split()[0]
 
         if str(raw_smiles) == str(new_smiles).split()[0]:
-            success.append(raw_smiles)
+            retain = "\t".join([str(counter), raw_smiles, new_smiles])
+            success.append(retain)
         else:
-            retain = "\t".join([raw_smiles, new_smiles])
+            retain = "\t".join([str(counter), raw_smiles, new_smiles])
             failing.append(retain)
+        counter += int(1)
     os.remove("output.sdf")
 
     print("\n---- ----\n")
     print("Brief report:")
     print(f"success structures: {len(success)}")
     with open("success_structures.log", mode="w") as newfile:
+        newfile.write("counter\tSMILES (prior)\tSMILES (after) round trip:\n")
         for entry in success:
             newfile.write(f"{entry}\n")
         newfile.write("END")
 
     print(f"failing structures: {len(failing)}")
     with open("failing_structures.log", mode="w") as newfile:
-        newfile.write("SMILES (prior)\tSMILES (after) round trip:\n")
+        newfile.write("counter\tSMILES (prior)\tSMILES (after) round trip:\n")
         for entry in failing:
             newfile.write(f"{entry}\n")
         newfile.write("\nEND")

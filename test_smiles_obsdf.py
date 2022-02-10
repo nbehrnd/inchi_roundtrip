@@ -48,14 +48,19 @@ def make_tester(structure=""):
     assert os.path.isfile("failing_structures.log")
     assert os.path.isfile("success_structures.log")
 
+    register = []
     success_reader = ""
     with open("success_structures.log", mode="r") as source:
-        success_reader = str(source.readline()).strip()
-    assert success_reader == smiles
+        register = source.readlines()
+    success_reader = str(register[1]).split()[0]
+    assert success_reader == str("1")
 
-    os.remove("testfile.smi")
-    os.remove("failing_structures.log")
-    os.remove("success_structures.log")
+    try:
+        for file in ["testfile.smi",
+                     "failing_structures.log", "sucess_structures.log"]:
+            os.remove(file)
+    except OSError:
+        print(f"Remove of file '{file}' failed.")
 
 
 def test_dimethylether():
