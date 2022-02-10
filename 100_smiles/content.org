@@ -2,15 +2,16 @@
 # author:  nbehrnd@yahoo.com
 # license: MIT, 2022
 # date:    <2022-02-01 Tue>
-# edit:
+# edit:    <2022-02-10 Thu>
 
 * objective
 
-  The initial version of Python script ~round.py~ read SMILES about a set of
-  100 drug like molecules suggested by DataWarrior.  Relaying to pybel of
-  OpenBabel, .sdf were written /on the fly/; the InChI reference executable
-  assigned non-standard InChI with fixed H-layer and equally regenerated .sdf
-  using the InChI.  pybel by OpenBabel again assigned SMILES.
+  The revised version of Python script ~smiles_obsdf.py~ (<2022-02-10 Thu>) read
+  SMILES about a set of 100 drug like molecules suggested by DataWarrior.
+  Relaying to pybel of OpenBabel, .sdf were written /on the fly/; the InChI
+  reference executable assigned non-standard InChI with fixed H-layer and
+  equally regenerated .sdf using the InChI.  pybel by OpenBabel again assigned
+  SMILES.
 
 * description  
 
@@ -22,11 +23,12 @@
   DW's SMILES.
 
 * content
-  #+begin_src bash :exports both :results raw
+  #+begin_src bash :exports both code replace :results raw code
 tree
   #+end_src
 
   #+RESULTS:
+  #+begin_src bash
   .
   ├── 100_smiles.txt
   ├── content.org
@@ -36,5 +38,6 @@ tree
   └── success_structures.log
 
   0 directories, 6 files
+  #+end_src
 
   # END
