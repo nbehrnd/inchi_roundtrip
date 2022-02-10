@@ -1,7 +1,7 @@
 # name:   inchi_roundtrip.org
 # author: nbehrnd@yahoo.com
 # date:   <2022-01-29 Sat>
-# edit:   <2022-02-09 Wed>
+# edit:   <2022-02-10 Thu>
 
 * background/intent
 
@@ -68,10 +68,17 @@
     To check the implementation of ~inchi_sdf.py~, test script
     ~test_inchi_sdf.py~ for Pytest was written.
 
-* Known unknowns
+  + ~smiles_rdkit.py~ departs from a list of SMILES to to write a RDKit SMILES
+    string (primary SMILES) to generate individual .sdf (with RDKit).  InChI
+    trust's reference executable assigns the InChI string which subsequently is
+    used to regenerate a .sdf for which again RDKit assigns a secondary SMILES
+    string.
 
-  As shown in the section /exploration on the CLI/, complementary to OpenBabel,
-  RDKit should be included in the programmatic tests.
+    The round trip is successful if RDKit's primary and secondary SMILES strings
+    match each other.
+
+    To check the implementation in ~smiles_rdkit.py~, test script
+    ~test_smiles_rdkit.py~ for Pytest was written.
 
 * exploration on the CLI
 
@@ -622,7 +629,7 @@ if __name__ == "__main__":
    #+begin_src python :tangle test_smiles_obsdf.py
 #!/bin/usr/env python3
 
-# name:    tangle test_smiles_obsdf.py
+# name:    test_smiles_obsdf.py
 # author:  nbehrnd@yahoo.com
 # license: GPL v3, 2022
 # date:    2022-02-07 (YYYY-MM-DD)
@@ -1382,6 +1389,77 @@ if __name__ == "__main__":
     main()
      #+end_src
 
+** check script for ~smiles_rdkit.py~, i.e. ~test_smiles_rdkit.py~
+
+   Again, provide a basic check for the implementation.
+
+   #+begin_src python :tangle test_smiles_rdkit.py
+#!/bin/usr/env python3
+
+# name:    test_smiles_rdkit.py
+# author:  nbehrnd@yahoo.com
+# license:
+# date:    2022-02-10 (YYYY-MM-DD)
+# edit:
+#
+
+"""Elementar testing about script smiles_rdkit.py."""
+import os                                         
+from subprocess import getstatusoutput, getoutput    #+end_src
+                                                  
+import pytest
+
+PROGRAM = str("./smiles_rdkit.py")
+TFILE = str("testfile.smi")
+
+
+def write_testfile(SMILES=""):
+    """Provide a file with the input structure."""
+    with open(TFILE, mode="w") as newfile:
+        newfile.write(str(SMILES))
+
+
+def make_tester(structure=""):
+    """Provide the frame to perform tests on varying SMILES strings."""
+    smiles = ""
+    smiles = str(structure)
+    write_testfile(SMILES=smiles)
+    assert os.path.isfile(TFILE)
+
+    test = getoutput(f"python3 {PROGRAM} {TFILE}")
+    assert os.path.isfile("failing_structures.log")
+    assert os.path.isfile("success_structures.log")
+
+    register = []
+    success_reader = ""
+    with open("success_structures.log", mode="r") as source:
+        register = source.readlines()
+        success_reader = register[1].split()[0]
+    assert success_reader == str("1")
+
+    try:
+        for file in ["testfile.smi",
+                     "failing_structures.log", "success_structures.log"]:
+            os.remove(file)
+    except OSError:
+        print(f"Remove of file '{file}' failed.")
+
+
+def test_dimethylether():
+    """Check a structure not prone to tautomerism."""
+    make_tester(structure="COC")
+
+
+def test_2hydroxypyridine():
+    """Check a structure prone to tautomerism, 1/2."""
+    make_tester(structure="Oc1ccccn1")
+
+
+def test_2pyridone():
+    """Check a structure prone to tautomerism, 2/2."""
+    make_tester(structure="O=c1cccc[nH]1")
+
+   #+end_src
 * Analyses
 
 ** Library of 100 entries
