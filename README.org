@@ -2,7 +2,7 @@
 # author:  nbehrnd@yahoo.com
 # license: MIT, 2022
 # date:    <2022-02-01 Tue>
-# edit:    <2022-02-09 Wed>
+# edit:    <2022-02-10 Thu>
 
 This project monitors round trip edits .sdf -> .inchi -> .sdf for molecular
 data.  File ~inchi_roundtrip.org~ is the container to generate the scripts and
@@ -30,10 +30,12 @@ tree -L 1
 ├── README.org
 ├── round.py
 ├── smiles_obsdf.py
+├── smiles_rdkit.py
 ├── test_inchi_sdf.py
-└── test_smiles_obsdf.py
+├── test_smiles_obsdf.py
+└── test_smiles_rdkit.py
 
-1 directory, 9 files
+1 directory, 11 files
 #+end_src
 
 

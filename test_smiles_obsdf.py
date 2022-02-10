@@ -1,6 +1,6 @@
 #!/bin/usr/env python3
 
-# name:    tangle test_smiles_obsdf.py
+# name:    test_smiles_obsdf.py
 # author:  nbehrnd@yahoo.com
 # license: GPL v3, 2022
 # date:    2022-02-07 (YYYY-MM-DD)
