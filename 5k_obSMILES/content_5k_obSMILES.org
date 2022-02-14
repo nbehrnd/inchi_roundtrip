@@ -1,0 +1,45 @@
+# name:    content_5k_obSMILES.org
+# author:  nbehrnd@yahoo.com
+# license: MIT, 2022
+# date:    <2022-02-14 Mon>
+# edit:
+
+* objective
+
+  Script ~smiles_obsdf.py~ generates initial .sdf from a list of SMILES which
+  enter the round trip to assign a primary InChI string by ~inchi-1~.  InChI
+  trust's reference executable generates an intermediary .sdf to assign a
+  secondary InChI string to compare with the primary string.
+
+* description
+
+  DataWarrior generated a library of 5k drug-like random molecules
+  (~Random_Molecules_5k.dwar~) exported as a list file
+  (~Random_Molecules_5k.txt~).  The SMILES of interest were extracted
+  #+begin_src awk :tangle no
+awk 'NR>=2{print $2}' Random_Molecules_5k.txt > Random_Molecules_5k.smi
+  #+end_src
+  for further processing.
+
+  Out of 5k structures submitted, 2027 entries are reported with an invariant
+  InChI string (40.5%), and 2973 entries with a different InChI string (59.5%)
+  after compared to the InChI string prior the round trip.
+
+* content
+
+  #+begin_src bash :exports both code replace :results raw code
+tree
+  #+end_src
+
+  #+RESULTS:
+  #+begin_src bash
+  .
+  ├── content_5k_obSMILES.org
+  ├── failing_structures.log
+  ├── Random_Molecules_5k.smi
+  ├── Random_Molecules_5k.txt
+  └── success_structures.log
+
+  0 directories, 5 files
+  #+end_src
+

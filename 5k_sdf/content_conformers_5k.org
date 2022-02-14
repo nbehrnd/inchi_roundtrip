@@ -1,0 +1,42 @@
+# name:    content_conformers_5k.org
+# author:  nbehrnd@yahoo.com
+# license: MIT, 2022
+# date:    <2022-02-14 Mon>
+# edit:
+
+* objective
+
+  Script ~inchi_sdf.py~ permits the direct round trip of .sdf to be assigned a
+  primary InChI string by ~inchi-1~ which the reference executable shall use to
+  generate an intermediary .sdf to assign a secondary InChI string.  Thus, the
+  round trip suggested then relies only on InChI trust's reference executable.
+
+* description
+
+  DataWarrior generated a library of 5k drug-like random molecules
+  (~Random_Molecules_5k.dwar~); for each entry, a single conformer was suggested
+  (~conformers_5k.dwar~) which was exported as .sdf v3000 file
+  (~conformers_5k.sdf~).  Out of 5k structures submitted, 1803 entries are
+  reported with an invariant InChI string (36.1%), and 3231 entries with a
+  different InChI string (64.6) after compared to the InChI string prior the
+  round trip.
+
+* content
+
+  #+begin_src bash :exports both code replace :results raw code
+tree
+  #+end_src
+
+  #+RESULTS:
+  #+begin_src bash
+  .
+  ├── conformers_5k.dwar
+  ├── conformers_5k.sdf
+  ├── content_conformers_5k.org
+  ├── failing_structures.log
+  ├── Random_Molecules_5k.dwar
+  └── success_structures.log
+
+  0 directories, 6 files
+  #+end_src
+
