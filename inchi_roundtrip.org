@@ -1686,10 +1686,15 @@ python3 smiles_obsdf.py 100_smiles.txt
    be one with SMILES for the structurs /after/ the round trip.
 
    #+begin_src bash :results both code replace :format code
-awk '{if ($2=="failing") print $3}' logger_variant_A.txt > intermediate.txt
-obabel -ismi intermediate.txt -O inter.svg
+awk '{if ($2=="failing") print $3}' logger_variant_A.txt > intermediate_a.txt
+awk '{if ($2=="failing") print $4}' logger_variant_A.txt > intermediate_b.txt
+obabel -ismi intermediate_a.txt -O inter_a.svg
+obabel -ismi intermediate_b.txt -O inter_b.svg
    #+end_src
 
    #+RESULTS:
    #+begin_src bash
    #+end_src
+
+   There seem to be some differences, which however aren't easily spot.  If
+   there is ~diff~ to compare text, is there a kind of ~diffsmi~ for SMILES?
