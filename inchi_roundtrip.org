@@ -1604,14 +1604,16 @@ for (var i = 1; i <= 1000; i++){
     primary_inchi = "";
     secondary_inchi = "";
     intermediate_smiles = "";
-    monitor_smiles = "";
+    monitor_smiles_a = "";
+    monitor_smiles_b = ""
 
     // variant a, format conversion:
     primary_inchi = {thisModel}.find("inchi", "fixedH");
-    monitor_smiles = {thisModel}.find("smiles")
+    monitor_smiles_a = {thisModel}.find("smiles")
 
     intermediate_smiles = primary_inchi.inchi("SMILES");
     secondary_inchi = intermediate_smiles.inchi("fixedH");
+    monitor_smiles_b = secondary_inchi.inchi("SMILES");
     // ----
 
     // variant b, explicit reload/update:
@@ -1625,10 +1627,10 @@ for (var i = 1; i <= 1000; i++){
     // ----
 
     if (primary_inchi == secondary_inchi);
-        print "" + i + " success " + monitor_smiles;
+        print "" + i + " success " + monitor_smiles_a + " " + monitor_smiles_b;
         success++;
     else;
-        print "" + i + " failing " + monitor_smiles;
+        print "" + i + " failing " + monitor_smiles_a + " " + monitor_smiles_b;
         failing++;
     endif;}
 
