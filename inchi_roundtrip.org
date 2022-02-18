@@ -1675,14 +1675,19 @@ python3 smiles_obsdf.py 100_smiles.txt
    | .sdf / InChI  |    5043 |    1803 |    3232 |    35.75% |
    | .sdf / Jmol   |         |         |         |           |
 
-   Departing from 5043 entries in the v3000 .sdf file, InChI trust's reference
-   executable ~inchi-1~ (version 1.06) run once to assign standard InChI.
-   Processing the .sdf again with today's version of ~structure_iterate.spt~ to
-   engage Jmol yielded a binary matching table of InChI strings with either
-   application.  In the variant to assign the non-standard InChI with fixed
-   H-layer, the moderated Jmol (14.32.22, 2022-02-15 15:16) assigns for all
-   5043 entries the same strings as InChI trusts reference executable; the odds
-   of an assignment different to the reference executable is less than 1/5043
-   (or less than 0.02%).
+   The first 1000k entries of the 5k library are submitted to ~Jmol_method-a~
+   (commitsha ~6bbca56ef~, <2022-02-18 Fri>) with a permanent record
+   (~logger_variant_A.txt~).  Some of the entries successfully pass the
+   processing, a small number does not (36, or 3.6%).  A first visual inspection
+   of the results suggests an extension of the Jmol script; in addition of
+   reporting the SMILES for structures /prior/ to the round trip, there should
+   be one with SMILES for the structurs /after/ the round trip.
 
+   #+begin_src bash :results both code replace :format code
+awk '{if ($2=="failing") print $3}' logger_variant_A.txt > intermediate.txt
+obabel -ismi intermediate.txt -O inter.svg
+   #+end_src
 
+   #+RESULTS:
+   #+begin_src bash
+   #+end_src
