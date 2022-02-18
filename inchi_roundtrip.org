@@ -1,7 +1,7 @@
 # name:   inchi_roundtrip.org
 # author: nbehrnd@yahoo.com
 # date:   <2022-01-29 Sat>
-# edit:   <2022-02-10 Thu>
+# edit:   <2022-02-18 Fri>
 
 * background/intent
 
@@ -35,6 +35,8 @@
     Linux Debian 12/bookworm (branch testing).
   + ~inchi-1~ reference executable for Linux (version 1.05) as provided by InChI
     trust  Assignment of InChI, generation of .sdf from the InChI.
+  + Jmol (14.32.22, released by 2022-02-15) able to assign SMILES and InChI
+    locally, regenerate structures from InChI by relay to the NIH cactus server.
   + Emacs (version 27.1) and orgmode for documentation, build and tangle of the
     eventually used Python script.
 
@@ -1469,6 +1471,173 @@ def test_2pyridone():
     make_tester(structure="O=c1cccc[nH]1")
 
    #+end_src
+* Approach with Jmol
+
+  [[https://jmol.sourceforge.net][Jmol]] recently was enabled to recognize isomeric structures as tautomers if
+  these share a standard InChI, but differ in their non-standard InChI with
+  fixed H-layer (cf. post on Jmol's [[https://sourceforge.net/p/jmol/mailman/message/37417385/][user list]] (<2022-01-14 Fri>, root), or the
+  subsequent announcement to InChI's [[https://sourceforge.net/p/inchi/mailman/message/37593452/][discussion board]] (<2022-01-19 Wed>)).
+
+  For two individual .sdf about 2-hydroxy pyridine (~M1.sdf~) and 2-pyridone
+  (~M2.sdf~), the approach in Jmol's console is
+  #+begin_src bash :tangle no
+load file "M1.sdf" "M2.sdf";
+
+print compare({1.1}, {2.1}, "isomer")
+print compare({1.1}, {2.1}, "isomer", true)
+  #+end_src
+  where the first check identifies the two as constitutional, the second as
+  tautomeric isomers.
+
+  For a programmatic scrutiny of batches of molecular formulae, Jmol's action
+  may be scripted and run e.g., with ~JmolData.jar~, or in a headerless instance
+  with ~Jmol.jar -ions~.  Difficulties to perform the following were removed by
+  <2022-02-15 Tue> with the release of Jmol (14.32.22).
+
+  + A MWE to survey Jmol assigned SMILES and InChI:
+
+    #+begin_src java :tangle structure_iterate.spt
+// name:    structure_iterate.spt
+// author:  nbehrnd@yahoo.com
+// license:
+// date:    2022-02-16 (YYYY-MM-DD)
+// edit:    2022-02-17 (YYYY-MM-DD)
+
+// Jmol may iterate over the entries of a multi-model .sdf file to
+// report e.g., SMILES, standard InChI, InChI with fixed H-layer.
+//
+// Based on the sequential approach shown to optimize structures
+//
+// https://chemapps.stolaf.edu/jmol/docs/#minimize
+//
+// Use with Jmol 14.32.22 (released by 2022-02-15), or later, by either
+//
+// ./Jmol.jar -ions structure_iterate.spt
+// ./JmolData.jar structure_iterate.spt
+//
+// with molecules.sdf present in the same folder.  For this, Jmol does
+// not appear to depend on the NIH cactus server.
+
+load MODELS {0, -1, 1} "molecules.sdf";  // work with all the models
+
+var n = {*}.model.max;  // determine the length of the model list
+
+for (var i = 1; i <= n; i++){
+    frame @i;
+    //    inchi_string = {thisModel}.find("inchi");
+    inchi_string = {thisModel}.find("inchi", "fixedH");
+    print "Structure: " + i + "\t" + inchi_string
+};
+    #+end_src
+
+  + A MWE to reconstruct structures with Jmol from InChI
+
+    #+begin_src java :tangle structure_reco.spt
+// name:    structure_reco.spt
+// author:  nbehrnd@yahoo.com
+// license:
+// date:    2022-02-16 (YYYY-MM-DD)
+// edit:
+
+// Based on an InChI string, Jmol may reconstruct the structre.
+// Credit for the method to Robert Hansen, e-mail by 2022-01-18,
+// https://sourceforge.net/p/jmol/mailman/message/37419647/ , and 
+// corrections toward Jmol 14.32.22 (released by 2022-02-15)
+// https://sourceforge.net/p/jmol/mailman/message/37610840/ .
+//
+// For the InChI2structure conversion, Jmol relays to the NIH cactus
+// server.  To be used either by
+//
+// ./JmolData.jar structure_reco.spt 
+// ./Jmol.jar -ions structure_reco.spt
+
+
+// "InChI=1S/C17H19NO3/c1-18-7-6-17-10-3-5-13(20)16(17)21-15-12(19)4-2-9(14(15)17)8-11(10)18/h2-5,10-11,13,16,19-20H,6-8H2,1H3/t10-,11+,13-,16-,17-/m0/s1"; // Robert Hansen's test formula (morphine)
+
+inchiString = "InChI=1S/C5H5NO/c7-5-3-1-2-4-6-5/h1-4H,(H,6,7)"  // both 2-hydroxy pyridine and 2-pyridone
+// inchiString = "InChI=1/C5H5NO/c7-5-3-1-2-4-6-5/h1-4H,(H,6,7)/f/h7H"  // M1, 2-hydroxy pyridine, fixedH
+// inchiString = "InChI=1/C5H5NO/c7-5-3-1-2-4-6-5/h1-4H,(H,6,7)/f/h6H"  // M2, 2-pyridone, fixedH
+// inchiString = "InChI=1S/C8H8O3/c9-7(8(10)11)6-4-2-1-3-5-6/h1-5,7,9H,(H,10,11)/t7-/m0/s1"  // (S)-mandelic acid
+// inchiString = "InChI=1S/C8H8O3/c9-7(8(10)11)6-4-2-1-3-5-6/h1-5,7,9H,(H,10,11)/t7-/m1/s1"  // (R)-mandelic acid
+
+
+smilesString = inchiString.inchi("SMILES")
+print smilesString
+
+
+load @{"$"+smilesString}  // not needed for running Jmol.jar with -ions
+    #+end_src
+    It is noteworthy that the reconstruction successfully trades with the
+    non-standard InChI about 2-hydroxy pyridine and 2-pyridone to yield either
+    one tautormer.
+
+  + Construction of a InChI round trip with Jmol, departing from .sdf
+
+    #+begin_src java :tangle jmol_sdf.spt
+// name:    jmol_sdf.spt
+// author:  nbehrnd@yahoo.com
+// license:
+// date:    2022-02-17 (YYYY-MM-DD)
+// edit:    2022-02-18 (YYYY-MM-DD)
+
+// Departing form an entry in a multi-model .sdf, Jmol assigns a primary InChI
+// with fixed H-layer.  This one is used by Jmol to build an intermediate .sdf
+// for which Jmol writes a secondary InChI string with fixed H-layer.  The round
+// trip qualifies as successful if the InChI string is invariant.
+//
+// Written for Jmol 14.32.22 (released by 2022-02-15) in Linux Debian
+// 12/bookworm (branch testing).  The execution relies on accessing the NIH
+// cactus server.  To be used by, e.g.
+//
+// ./Jmol.jar -ions jmol_sdf.spt
+//
+// in presence of molecules.sdf containing the data to probe.
+
+load MODELS {0, -1, 1} "molecules.sdf";  // work with all the models
+
+var n = {*}.model.max;  // length of the model list
+success = 0;
+failing = 0;
+
+for (var i = 1; i <= 1000; i++){
+    frame @i;
+    primary_inchi = "";
+    secondary_inchi = "";
+    intermediate_smiles = "";
+    monitor_smiles = "";
+
+    // variant a, format conversion:
+    primary_inchi = {thisModel}.find("inchi", "fixedH");
+    monitor_smiles = {thisModel}.find("smiles")
+
+    intermediate_smiles = primary_inchi.inchi("SMILES");
+    secondary_inchi = intermediate_smiles.inchi("fixedH");
+    // ----
+
+    // variant b, explicit reload/update:
+    // primary_inchi = {thisModel}.find("inchi", "fixedH");
+    // monitor_smiles = {thisModel}.find("smiles")
+
+    // load_string = "$" + primary_inchi;
+    // load @load_string;
+
+    // secondary_inchi = {thisModel}.find("inchi", "fixedH");
+    // ----
+
+    if (primary_inchi == secondary_inchi);
+        print "" + i + " success " + monitor_smiles;
+        success++;
+    else;
+        print "" + i + " failing " + monitor_smiles;
+        failing++;
+    endif;}
+
+print "\n ---- brief report ----";
+print "success " + success;
+print "failing " + failing;
+    #+end_src
+
+
 * Analyses
 
 ** Library of 100 entries
@@ -1491,3 +1660,29 @@ python3 smiles_obsdf.py 100_smiles.txt
    trip.  The visual comparison of the representations reveals that the current
    approach taken looses the information about the configuration of double bonds
    (E/Z) and stereogenic centers (R/S).
+
+** Library of 5k entries
+
+   DataWarrior suggested a library of 5k drug-like molecules
+   (~Random_Molecules_5k.dwar~), exported as text file including SMILES
+   (~Random_Molecules_5k.txt~, 5000 entries), or v3000 .sdf
+   (~conformers_5k.sdf~, 5034 entries).
+
+   | departing     | entries | success | failing | invariant |
+   |---------------+---------+---------+---------+-----------|
+   | .smi / obabel |    5000 |    2027 |    2973 |    40.54% |
+   | .smi / RDKit  |    5000 |    2048 |    2952 |    40.96% |
+   | .sdf / InChI  |    5043 |    1803 |    3232 |    35.75% |
+   | .sdf / Jmol   |         |         |         |           |
+
+   Departing from 5043 entries in the v3000 .sdf file, InChI trust's reference
+   executable ~inchi-1~ (version 1.06) run once to assign standard InChI.
+   Processing the .sdf again with today's version of ~structure_iterate.spt~ to
+   engage Jmol yielded a binary matching table of InChI strings with either
+   application.  In the variant to assign the non-standard InChI with fixed
+   H-layer, the moderated Jmol (14.32.22, 2022-02-15 15:16) assigns for all
+   5043 entries the same strings as InChI trusts reference executable; the odds
+   of an assignment different to the reference executable is less than 1/5043
+   (or less than 0.02%).
+
+

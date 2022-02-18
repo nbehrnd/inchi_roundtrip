@@ -1,0 +1,61 @@
+// name:    jmol_sdf.spt
+// author:  nbehrnd@yahoo.com
+// license:
+// date:    2022-02-17 (YYYY-MM-DD)
+// edit:    2022-02-18 (YYYY-MM-DD)
+
+// Departing form an entry in a multi-model .sdf, Jmol assigns a primary InChI
+// with fixed H-layer.  This one is used by Jmol to build an intermediate .sdf
+// for which Jmol writes a secondary InChI string with fixed H-layer.  The round
+// trip qualifies as successful if the InChI string is invariant.
+//
+// Written for Jmol 14.32.22 (released by 2022-02-15) in Linux Debian
+// 12/bookworm (branch testing).  The execution relies on accessing the NIH
+// cactus server.  To be used by, e.g.
+//
+// ./Jmol.jar -ions jmol_sdf.spt
+//
+// in presence of molecules.sdf containing the data to probe.
+
+load MODELS {0, -1, 1} "molecules.sdf";  // work with all the models
+
+var n = {*}.model.max;  // length of the model list
+success = 0;
+failing = 0;
+
+for (var i = 1; i <= 1000; i++){
+    frame @i;
+    primary_inchi = "";
+    secondary_inchi = "";
+    intermediate_smiles = "";
+    monitor_smiles = "";
+
+    // variant a, format conversion:
+    primary_inchi = {thisModel}.find("inchi", "fixedH");
+    monitor_smiles = {thisModel}.find("smiles")
+
+    intermediate_smiles = primary_inchi.inchi("SMILES");
+    secondary_inchi = intermediate_smiles.inchi("fixedH");
+    // ----
+
+    // variant b, explicit reload/update:
+    // primary_inchi = {thisModel}.find("inchi", "fixedH");
+    // monitor_smiles = {thisModel}.find("smiles")
+
+    // load_string = "$" + primary_inchi;
+    // load @load_string;
+
+    // secondary_inchi = {thisModel}.find("inchi", "fixedH");
+    // ----
+
+    if (primary_inchi == secondary_inchi);
+        print "" + i + " success " + monitor_smiles;
+        success++;
+    else;
+        print "" + i + " failing " + monitor_smiles;
+        failing++;
+    endif;}
+
+print "\n ---- brief report ----";
+print "success " + success;
+print "failing " + failing;
