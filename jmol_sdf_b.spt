@@ -1,0 +1,86 @@
+// name:    jmol_sdf_b.spt
+// author:  nbehrnd@yahoo.com 
+// licence: GPLv2, 2022
+// date:    2022-02-25 (YYYY-MM-DD)
+// edit:    2022-03-03 (YYYY-MM-DD)
+//
+// Thanks to continous constructive criticism by Robert Hanson.
+//
+// Deposit this script in the folder of Jmol.jar and molecules.sdf.  After
+// provison of the executable bit, run 
+//
+// ./Jmol.jar -ions jmol_sdf_b.spt > record.txt
+//
+// File molecules.sdf (in v2000 format) contains the models to process.
+// The record file lists the entry counter, success/failing label, SMILES
+// prior and after the round trip edit by Jmol and the remote NIH server.
+// For each individually probed model in the .sdf, the round trip is labeled
+// "success" if SMILES are invariant to the round trip; else "failing".
+
+load MODELS {0, -1, 1} "molecules.sdf";
+var n = {*}.model.max;  // length of the model list
+
+var cdata = [];
+for (var i = 1; i <= n; i++){
+    frame @i;
+    primary_inchi = "";
+    secondary_inchi = "";
+    intermediate_smiles = "";
+    monitor_smiles_a = "";
+    monitor_smiles_b = "";
+    load_string = "";
+
+ primary_inchi = {thisModel}.find("inchi", "fixedH");
+ monitor_smiles_a = {thisModel}.find("smiles")
+ cdata.push( { "inchi":primary_inchi, "smiles": monitor_smiles_a } )
+}
+
+for (var i = 1; i <= n; i++){
+ var d = cdata[i];
+ load_string = "$" + d.inchi;
+ load @load_string;
+
+ secondary_inchi = {thisModel}.find("inchi", "fixedH");
+ monitor_smiles_b = {thisModel}.find("smiles")
+
+// report back to the CLI:  4 entries, one false positif:
+// print "" + i + " " + (d.smiles.find("SMILES", monitor_smiles_b) and
+//   monitor_smiles_b.find("SMILES", d.smiles) and
+//   (d.inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// report back to the CLI:  4 entries, one false positif:
+//print "" + i + " " + (d.smiles.find("SMILES", monitor_smiles_b) and
+//   (d.inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// reports back only the false positif
+//print "" + i + " " + (
+//   (primary_inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// reports all entries as passing the round trip
+//print "" + i + " " + (
+//   (primary_smiles==secondary_smiles) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// reports 3 entries as failing the round trip, no false-positif; the best so far a
+print "" + i + " " + (d.smiles.find("SMILES", monitor_smiles_b) ? "success" : "failing") +
+  " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi + " " + primary_inchi + 
+  " " +  secondary_inchi;
+
+// reports 3 entries as failing the round trip, no false-positif; the best so far
+// print "" + i + " " + ((primary_inchi==secondary_inchi) ? "success" : "failing") +
+//  " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi + 
+//  " " +  secondary_inchi;
+ 
+// // report back to the CLI: 1 false positive (CDKDepict the same)
+// print "" + i + " " + ((d.inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+}

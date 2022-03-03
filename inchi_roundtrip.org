@@ -1,7 +1,7 @@
 # name:   inchi_roundtrip.org
 # author: nbehrnd@yahoo.com
 # date:   <2022-01-29 Sat>
-# edit:   <2022-02-18 Fri>
+# edit:   <2022-03-03 Thu>
 
 * background/intent
 
@@ -1573,12 +1573,12 @@ load @{"$"+smilesString}  // not needed for running Jmol.jar with -ions
 
   + Construction of a InChI round trip with Jmol, departing from .sdf
 
-    #+begin_src java :tangle jmol_sdf.spt
-// name:    jmol_sdf.spt
+    #+begin_src java :tangle jmol_sdf_a.spt
+// name:    jmol_sdf_a.spt
 // author:  nbehrnd@yahoo.com
 // license:
 // date:    2022-02-17 (YYYY-MM-DD)
-// edit:    2022-02-18 (YYYY-MM-DD)
+// edit:    2022-02-25 (YYYY-MM-DD)
 
 // Departing form an entry in a multi-model .sdf, Jmol assigns a primary InChI
 // with fixed H-layer.  This one is used by Jmol to build an intermediate .sdf
@@ -1599,7 +1599,7 @@ var n = {*}.model.max;  // length of the model list
 success = 0;
 failing = 0;
 
-for (var i = 1; i <= 1000; i++){
+for (var i = 1; i <= n; i++){
     frame @i;
     primary_inchi = "";
     secondary_inchi = "";
@@ -1614,17 +1614,6 @@ for (var i = 1; i <= 1000; i++){
     intermediate_smiles = primary_inchi.inchi("SMILES");
     secondary_inchi = intermediate_smiles.inchi("fixedH");
     monitor_smiles_b = secondary_inchi.inchi("SMILES");
-    // ----
-
-    // variant b, explicit reload/update:
-    // primary_inchi = {thisModel}.find("inchi", "fixedH");
-    // monitor_smiles = {thisModel}.find("smiles")
-
-    // load_string = "$" + primary_inchi;
-    // load @load_string;
-
-    // secondary_inchi = {thisModel}.find("inchi", "fixedH");
-    // ----
 
     if (primary_inchi == secondary_inchi);
         print "" + i + " success " + monitor_smiles_a + " " + monitor_smiles_b;
@@ -1639,6 +1628,136 @@ print "success " + success;
 print "failing " + failing;
     #+end_src
 
+  + Based on the pattern suggestion by Robert Hanson (email by
+    <2022-02-21 Mon>):
+
+    #+begin_src java :tangle jmol_sdf_b.spt
+// name:    jmol_sdf_b.spt
+// author:  nbehrnd@yahoo.com 
+// licence: GPLv2, 2022
+// date:    2022-02-25 (YYYY-MM-DD)
+// edit:    2022-03-03 (YYYY-MM-DD)
+//
+// Thanks to continous constructive criticism by Robert Hanson.
+//
+// Deposit this script in the folder of Jmol.jar and molecules.sdf.  After
+// provison of the executable bit, run 
+//
+// ./Jmol.jar -ions jmol_sdf_b.spt > record.txt
+//
+// File molecules.sdf (in v2000 format) contains the models to process.
+// The record file lists the entry counter, success/failing label, SMILES
+// prior and after the round trip edit by Jmol and the remote NIH server.
+// For each individually probed model in the .sdf, the round trip is labeled
+// "success" if SMILES are invariant to the round trip; else "failing".
+
+load MODELS {0, -1, 1} "molecules.sdf";
+var n = {*}.model.max;  // length of the model list
+
+var cdata = [];
+for (var i = 1; i <= n; i++){
+    frame @i;
+    primary_inchi = "";
+    secondary_inchi = "";
+    intermediate_smiles = "";
+    monitor_smiles_a = "";
+    monitor_smiles_b = "";
+    load_string = "";
+
+ primary_inchi = {thisModel}.find("inchi", "fixedH");
+ monitor_smiles_a = {thisModel}.find("smiles")
+ cdata.push( { "inchi":primary_inchi, "smiles": monitor_smiles_a } )
+}
+
+for (var i = 1; i <= n; i++){
+ var d = cdata[i];
+ load_string = "$" + d.inchi;
+ load @load_string;
+
+ secondary_inchi = {thisModel}.find("inchi", "fixedH");
+ monitor_smiles_b = {thisModel}.find("smiles")
+
+// report back to the CLI:  4 entries, one false positif:
+// print "" + i + " " + (d.smiles.find("SMILES", monitor_smiles_b) and
+//   monitor_smiles_b.find("SMILES", d.smiles) and
+//   (d.inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// report back to the CLI:  4 entries, one false positif:
+//print "" + i + " " + (d.smiles.find("SMILES", monitor_smiles_b) and
+//   (d.inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// reports back only the false positif
+//print "" + i + " " + (
+//   (primary_inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// reports all entries as passing the round trip
+//print "" + i + " " + (
+//   (primary_smiles==secondary_smiles) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+// reports 3 entries as failing the round trip, no false-positif; the best so far a
+print "" + i + " " + (d.smiles.find("SMILES", monitor_smiles_b) ? "success" : "failing") +
+  " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi + " " + primary_inchi + 
+  " " +  secondary_inchi;
+
+// reports 3 entries as failing the round trip, no false-positif; the best so far
+// print "" + i + " " + ((primary_inchi==secondary_inchi) ? "success" : "failing") +
+//  " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi + 
+//  " " +  secondary_inchi;
+ 
+// // report back to the CLI: 1 false positive (CDKDepict the same)
+// print "" + i + " " + ((d.inchi==secondary_inchi) ? "success" : "failing") +
+//   " " + d.smiles + " " + monitor_smiles_b + " " + d.inchi +
+//   " " +  secondary_inchi;
+
+}
+    #+end_src
+
+    If the output in common to the CLI is directed to a permanent record file,
+    AWK may split this depending on the label assigned.  ~cdkdepict~ is one
+    useful tool for a subsequent visualization, because
+    + SMILES prior/after the failing round trip may be submitted as a pair,
+      separated from the next round trip data by a blank line in the input for
+      ~cdkdepict~.
+    + the visualization by ~cdkdepict~ is fixed to four columns per row.
+    + ~cdkdepict~ offers optional display of CIP labels.  In the set of
+      100 molecules, /this/ was helpful.
+    
+    #+begin_src awk :tangle sort.awk
+#!/usr/bin/awk -f
+
+# name:    sort.awk
+# author:  nbehrnd@yahoo.com
+# license: GPLv2, 2022
+# date:    2022-03-03 (YYYY-MM-DD)
+# edit:
+
+# Jmol's report assigns the round trip either successful (i.e., both
+# SMILES and InChI string are invariant), or failing.  By calling this
+# awk script by
+#
+# awk -f sort.awk report.log
+#
+# `failing.txt` and `success.txt` written provide input for a visual
+# inspection by cdkdepict.[1]  The name of this script's input file
+# need not be `report.log`.
+#
+# [1] https://www.simolecule.com/cdkdepict/depict.html
+
+BEGIN {print "Script sorts entries in Jmol's log according to their status."};
+
+{if($2 == "failing"){print $3 "\n" $4 "\n" > "failing.txt"}};
+{if($2 == "success"){print $3 > "success.txt"}};
+
+END {print "See CDKdepict: https://www.simolecule.com/cdkdepict/depict.html"};
+    #+end_src
 
 * Analyses
 
